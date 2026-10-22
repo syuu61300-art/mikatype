@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>タイプトレーナー Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1f2a56; --sub:#5b6385; --accent:#7b2d8b;
+  --ok:#1d7a3e; --miss:#c23a2b; --done:#b0b6c9; --hl:#fff0b3; --line:#d9dcea; --key:#eceef5;
+  --f-lp:#e57373; --f-lr:#f0a04b; --f-lm:#5fb36a; --f-li:#4f9be0;
+  --f-ri:#4f9be0; --f-rm:#5fb36a; --f-rr:#f0a04b; --f-rp:#e57373;
+  --fs:28px; --lh:58px; --kw:44px; --kg:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14161f; --panel:#1c1f2b; --ink:#e6e8f2; --sub:#9aa1bd; --accent:#d08ae0;
+    --ok:#5fd18a; --miss:#ff7b6b; --done:#4d5370; --hl:#3d3618; --line:#2e3245; --key:#262a39;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",Meiryo,sans-serif}
+#app{max-width:1000px;margin:0 auto;padding:20px 16px 40px}
+.mono{font-family:"BIZ UDGothic",ui-monospace,monospace}
+
+.title{text-align:center;color:var(--accent);font-size:20px;font-weight:400;letter-spacing:.15em;margin:6px 0 26px}
+.dots{display:inline-flex;gap:6px;vertical-align:middle;margin:0 14px}
+.dots i{width:14px;height:14px;border-radius:50%;background:var(--accent);display:block}
+
+/* ---------- menu ---------- */
+.menu{list-style:none;padding:0;margin:0 auto;max-width:480px}
+.menu li{display:flex;gap:28px;align-items:center;padding:10px 18px;font-size:24px;letter-spacing:.12em;border-radius:10px;cursor:pointer}
+.menu li .no{width:1.2em;text-align:right;font-family:"BIZ UDGothic",monospace}
+.menu li.sel{color:var(--ok);background:var(--panel);box-shadow:inset 0 -3px 0 var(--ok)}
+.menu li.gap{margin-top:20px}
+.hint{text-align:center;color:var(--sub);margin-top:30px;font-size:15px;line-height:1.8}
+.hint.warn{color:var(--miss);font-weight:700}
+kbd{font-family:"BIZ UDGothic",monospace;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:1px 7px;background:var(--panel);font-size:.95em}
+
+/* ---------- practice ---------- */
+.meta{text-align:center;color:var(--ok);margin:-16px 0 14px;font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.stat .lb{font-size:12px;color:var(--sub)}
+.stat .v{font-family:"BIZ UDGothic",monospace;font-size:22px}
+.stat .v small{font-size:13px;margin-left:2px;color:var(--sub)}
+.guide{display:flex;justify-content:center;align-items:baseline;gap:14px;min-height:56px;margin:4px 0 10px;
+  font-family:"BIZ UDGothic",monospace;font-size:32px;letter-spacing:.05em}
+.guide .lb{font-size:16px;color:var(--sub);font-family:"BIZ UDPGothic",sans-serif;letter-spacing:.1em}
+.guide .typed{color:var(--done)}
+.guide .rest b{color:var(--accent);text-decoration:underline;text-underline-offset:6px}
+.guide.shake{animation:shake .18s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+.textbox{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:6px 18px;height:calc(var(--lh) * 5 + 14px);overflow:hidden;font-size:var(--fs);line-height:var(--lh)}
+/* ② 単語の途中で改行しない */
+.w{display:inline-block;white-space:nowrap;margin-right:1.1em;padding:0 .2em;border-radius:6px;line-height:calc(var(--lh) - 14px)}
+.w.cur{background:var(--hl)}
+.c.done{color:var(--done)}
+.c.now{color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.c.miss{color:var(--miss);box-shadow:inset 0 -3px 0 var(--miss)}
+
+.result{background:var(--panel);border:2px solid var(--ok);border-radius:12px;padding:14px 18px;margin:12px 0;text-align:center;line-height:1.9}
+.result .nums{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 26px;font-size:18px}
+.result .nums b{font-family:"BIZ UDGothic",monospace;font-size:24px;margin:0 4px}
+.result .nums .bad b{color:var(--miss)}
+.result .newrec{color:var(--accent);font-weight:700;font-size:18px}
+
+.next{text-align:center;color:var(--sub);margin:14px 0 6px;min-height:28px}
+.kb{width:max-content;margin:0 auto;display:flex;flex-direction:column;gap:var(--kg);user-select:none}
+.kb .row{display:flex;gap:var(--kg)}
+.kb .k{position:relative;width:var(--kw);height:var(--kw);border-radius:8px;background:var(--key);display:grid;place-items:center;
+  font-family:"BIZ UDGothic",monospace;font-size:16px;border-bottom:4px solid var(--fc);transition:background .08s}
+.kb .k.home::after{content:"";position:absolute;bottom:6px;width:12px;height:2px;border-radius:2px;background:currentColor;opacity:.6}
+.kb .k.next{background:var(--accent);color:#fff;transform:translateY(-2px)}
+
+/* ---------- results ---------- */
+.summary{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;color:var(--ok);margin-bottom:16px}
+.summary b{font-family:"BIZ UDGothic",monospace;color:var(--ink);margin-left:8px}
+table.rec{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden;font-size:16px}
+table.rec th,table.rec td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left}
+table.rec th{color:var(--sub);font-weight:400;font-size:13px}
+table.rec td.n{font-family:"BIZ UDGothic",monospace;text-align:right;white-space:nowrap}
+table.rec tr.grp td{color:var(--accent);font-weight:700;background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.confirm{text-align:center;font-size:20px;line-height:2.4;margin-top:40px}
+.btn{font:inherit;font-size:17px;padding:6px 22px;margin:0 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+
+@media (max-width:700px){
+  :root{--fs:21px;--lh:44px;--kw:24px;--kg:3px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .guide{font-size:24px}
+  .kb .k{font-size:11px;border-radius:5px;border-bottom-width:3px}
+  .menu li{font-size:20px;gap:18px}
+  table.rec{font-size:13px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   設定
+   ========================================================= */
+const LIMIT = 60;                       // 制限時間（秒）
+const STORE = 'typetrainer-web-v1';     // 成績の保存先（localStorage）
+
+/* =========================================================
+   練習用データ
+   ========================================================= */
+const JA_WORDS = `
+あさがお いちご うさぎ えんぴつ おにぎり かばん きっぷ くつした けいさん こうえん
+さかな しんぶん すいか せんたく そらまめ たまご ちきゅう つくえ てがみ ともだち
+なつやすみ にんじん ぬいぐるみ ねこじゃらし のりもの はなび ひこうき ふうせん へいわ ほっかいどう
+まくら みずうみ むかし めがね もみじ やさい ゆきだるま ようふく らいおん りんご
+るすばん れきし ろうそく わたがし がっこう ぎゅうにゅう げんき ごはん ざっし じてんしゃ
+ずかん ぜんぶ だいどころ でんわ どうぶつ ばんごはん びょういん ぶどう べんきょう ぼうし
+ぴあの ぷりん ぺんぎん きょうしつ しゃしん ちゃわん にゅうがく ひゃくえん みょうじ りょこう
+じゅぎょう でんしゃ おちゃ しゅくだい ちょきん きって まっすぐ いっしょ ちょっと がっき
+しっぽ はっぱ らっぱ こんにちは ありがとう おはよう さようなら おやすみ いただきます ごちそうさま
+すみません てんき かみなり たいよう ほしぞら みなと としょかん えきまえ くうこう びじゅつかん
+はくぶつかん すいぞくかん ゆうびんきょく けいさつ しょうぼうしゃ きゅうきゅうしゃ おかあさん おとうさん おばあちゃん おじいちゃん
+きょうだい せんせい いしゃ かんごし うんてんしゅ りょうり そうじ かいもの さんぽ すいえい
+やきゅう さっかー けーき こーひー じゅーす らーめん きんようび げんいん こんや ほんや
+みんな あんない しんゆう たんい けんか はんたい かんじ ひらがな かたかな ろーまじ
+たいぷ れんしゅう はやさ せいかく ゆびさき きーぼーど ほーむ ぽじしょん しずか にぎやか
+あたたかい すずしい おいしい たのしい うれしい はずかしい むずかしい やさしい つめたい あかるい
+しゅっぱつ とうちゃく けっか せいせき もくひょう ちょうせん しんきろく きゅうけい がんばる つづける
+`.trim().split(/\s+/);
+
+const EN_WORDS = `
+about after again apple area back ball bank basket begin bird black blue boat body book bread bring
+brother build busy cake call camera card care carry catch chair change child city class clean clock
+close cloud coffee color come cook country cup dance dark desk dinner dream drink drive early earth
+east easy egg enjoy evening face family farm father field find fire fish flower food foot forest
+friend fruit game garden give glass good grass great green group hand happy head hear help home horse
+hospital hour house idea island juice keep kitchen know lake language large learn letter library light
+listen little live long look lunch make many market milk minute money month morning mother mountain music
+name nature near news night north number ocean office open orange paper park party pencil people piano
+picture place plan play please pocket power question quick rain read river road room school season
+second ship shop short sing sister sleep small snow song sound south speak spring star station story
+street student study summer table talk teacher team tennis thank think today together tomorrow town train
+travel tree under use vacation visit voice wait walk want warm watch water weather week window winter
+word work world write year yellow young
+`.trim().split(/\s+/);
+
+const PROG_WORDS = `
+function return const let var class import export async await while for switch case break continue default
+typeof instanceof console log document window array object string number boolean null undefined true false
+print def lambda yield python javascript html css script style div span input button event listener promise
+fetch json parse stringify length push map filter reduce static public private void int char float double
+struct printf scanf main include git commit pull branch merge clone status npm install node server client
+request response module package interface extends implements try catch finally throw new this super
+`.trim().split(/\s+/);
+
+const KANA_POOL = [...'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんがぎぐげござじずぜぞだでどばびぶべぼぱぴぷぺぽ',
+  'きゃ','きゅ','きょ','しゃ','しゅ','しょ','ちゃ','ちゅ','ちょ','にゃ','ひゃ','みゃ','りゃ','りょ','ぎゃ','じゃ','じゅ','じょ','びゃ','ぴゃ'];
+
+/* 練習項目 */
+const ITEMS = {
+  home:      {name:'ホームポジション',               group:'pos', chars:'asdfghjkl;'},
+  upper:     {name:'上一段',                         group:'pos', chars:'qwertyuiop'},
+  homeUpper: {name:'ホームポジション＋上一段',       group:'pos', chars:'asdfghjkl;qwertyuiop'},
+  lower:     {name:'下一段',                         group:'pos', chars:'zxcvbnm,./'},
+  homeLower: {name:'ホームポジション＋下一段',       group:'pos', chars:'asdfghjkl;zxcvbnm,./'},
+  threeRows: {name:'ホームポジション＋上一段＋下一段', group:'pos', chars:'asdfghjkl;qwertyuiopzxcvbnm,./'},
+  numbers:   {name:'数字',                           group:'pos', chars:'1234567890'},
+  allRows:   {name:'全段',                           group:'pos', chars:'1234567890-qwertyuiopasdfghjkl;zxcvbnm,./'},
+  random:    {name:'ランダム練習',                   group:'random', chars:'abcdefghijklmnopqrstuvwxyz'},
+  enBasic:   {name:'基本英単語練習',                 group:'en', words:EN_WORDS},
+  enProg:    {name:'プログラミング用語練習',         group:'en', words:PROG_WORDS},
+  jaRandom:  {name:'ローマ字ランダム練習',           group:'ja', kana:true, pool:KANA_POOL},
+  jaWord:    {name:'ローマ字単語練習',               group:'ja', kana:true, words:JA_WORDS},
+};
+const GROUPS = [
+  {id:'pos',    name:'ポジション練習', menu:'position'},
+  {id:'random', name:'ランダム練習',   menu:'main'},
+  {id:'en',     name:'英単語練習',     menu:'english'},
+  {id:'ja',     name:'ローマ字練習',   menu:'romaji'},
+];
+
+/* =========================================================
+   ローマ字変換テーブル（先頭がガイド表示に使われる）
+   ========================================================= */
+const TABLE = {};
+[
+ ['あ','a'],['い','i','yi'],['う','u','wu','whu'],['え','e'],['お','o'],
+ ['か','ka','ca'],['き','ki'],['く','ku','cu','qu'],['け','ke'],['こ','ko','co'],
+ ['さ','sa'],['し','si','shi','ci'],['す','su'],['せ','se','ce'],['そ','so'],
+ ['た','ta'],['ち','ti','chi'],['つ','tu','tsu'],['て','te'],['と','to'],
+ ['な','na'],['に','ni'],['ぬ','nu'],['ね','ne'],['の','no'],
+ ['は','ha'],['ひ','hi'],['ふ','hu','fu'],['へ','he'],['ほ','ho'],
+ ['ま','ma'],['み','mi'],['む','mu'],['め','me'],['も','mo'],
+ ['や','ya'],['ゆ','yu'],['よ','yo'],
+ ['ら','ra'],['り','ri'],['る','ru'],['れ','re'],['ろ','ro'],
+ ['わ','wa'],['を','wo'],
+ ['が','ga'],['ぎ','gi'],['ぐ','gu'],['げ','ge'],['ご','go'],
+ ['ざ','za'],['じ','zi','ji'],['ず','zu'],['ぜ','ze'],['ぞ','zo'],
+ ['だ','da'],['ぢ','di'],['づ','du'],['で','de'],['ど','do'],
+ ['ば','ba'],['び','bi'],['ぶ','bu'],['べ','be'],['ぼ','bo'],
+ ['ぱ','pa'],['ぴ','pi'],['ぷ','pu'],['ぺ','pe'],['ぽ','po'],
+ ['ぁ','la','xa'],['ぃ','li','xi'],['ぅ','lu','xu'],['ぇ','le','xe'],['ぉ','lo','xo'],
+ ['ゃ','lya','xya'],['ゅ','lyu','xyu'],['ょ','lyo','xyo'],['ゎ','lwa','xwa'],
+ ['ゔ','vu'],['ー','-'],['、',','],['。','.'],
+ ['ふぁ','fa'],['ふぃ','fi'],['ふぇ','fe'],['ふぉ','fo'],['ふゅ','fyu'],
+ ['てぃ','thi'],['でぃ','dhi'],['てゅ','thu'],['でゅ','dhu'],
+ ['うぃ','wi'],['うぇ','we'],['うぉ','who'],
+ ['ゔぁ','va'],['ゔぃ','vi'],['ゔぇ','ve'],['ゔぉ','vo'],
+].forEach(([k,...r]) => TABLE[k] = r);
+
+const SMALL = {'ゃ':'a','ゅ':'u','ょ':'o','ぃ':'i','ぇ':'e'};
+[['き','ky'],['ぎ','gy'],['に','ny'],['ひ','hy'],['び','by'],['ぴ','py'],['み','my'],['り','ry'],['ぢ','dy']]
+  .forEach(([k,c]) => { for (const s in SMALL) TABLE[k+s] = [c+SMALL[s]]; });
+for (const s in SMALL) {
+  const v = SMALL[s], noI = v !== 'i';
+  TABLE['し'+s] = ['sy'+v, ...(noI ? ['sh'+v] : [])];
+  TABLE['ち'+s] = ['ty'+v, 'cy'+v, ...(noI ? ['ch'+v] : [])];
+  TABLE['じ'+s] = ['zy'+v, 'jy'+v, ...(noI ? ['j'+v] : [])];
+}
+// 「ん」を n 1文字で打てない直後のかな
+const NO_SINGLE_N = 'あいうえおやゆよなにぬねのんゃゅょぁぃぅぇぉ';
+
+/* =========================================================
+   入力判定
+   ========================================================= */
+// ローマ字（複数の打ち方に対応：si/shi、tu/tsu、n/nn、kka/ltu など）
+class RomajiMatcher {
+  constructor(text){ this.text = text; this.pos = 0; this.buf = ''; }
+
+  cands(p){
+    const t = this.text, out = [];
+    if (p >= t.length) return out;
+    const c = t[p];
+    if (p + 1 < t.length) {
+      const two = TABLE[t.substr(p, 2)];
+      if (two) for (const r of two) out.push({r, len:2});
+    }
+    if (c === 'ん') {
+      const nx = t[p+1];
+      if (nx !== undefined && !NO_SINGLE_N.includes(nx)) out.push({r:'n', len:1});
+      out.push({r:'nn',len:1},{r:'xn',len:1},{r:"n'",len:1});
+    } else if (c === 'っ') {
+      const seen = new Set();
+      for (const o of this.cands(p+1)) {
+        const f = o.r[0];
+        if (/[bcdfghjkmpqrstvwyz]/.test(f) && !seen.has(f)) { seen.add(f); out.push({r:f, len:1}); }
+      }
+      for (const r of ['ltu','xtu','ltsu','xtsu']) out.push({r, len:1});
+    } else if (TABLE[c]) {
+      for (const r of TABLE[c]) out.push({r, len:1});
+    } else {
+      out.push({r:c, len:1});
+    }
+    return out;
+  }
+
+  input(ch){
+    const cs = this.cands(this.pos);
+    const nb = this.buf + ch;
+    const m = cs.filter(o => o.r.startsWith(nb));
+    if (m.length) {
+      const exact = m.find(o => o.r === nb);
+      const longer = m.some(o => o.r.length > nb.length);
+      if (exact && !longer) { this.pos += exact.len; this.buf = ''; return {ok:true, done:exact.len}; }
+      this.buf = nb;
+      return {ok:true, done:0};
+    }
+    // 「n」で止まっている「ん」などを確定してから次の文字として判定
+    if (this.buf) {
+      const exact = cs.find(o => o.r === this.buf);
+      if (exact) {
+        const sp = this.pos, sb = this.buf;
+        this.pos += exact.len; this.buf = '';
+        const r = this.input(ch);
+        if (r.ok) return {ok:true, done:exact.len + r.done, carried:true};
+        this.pos = sp; this.buf = sb;
+      }
+    }
+    return {ok:false};
+  }
+
+  // 現在位置から end までの残りのローマ字ガイド
+  guide(end){
+    let s = '', p = this.pos;
+    if (p < this.text.length) {
+      const cs = this.cands(p);
+      const c = cs.find(o => o.r.startsWith(this.buf)) || cs[0];
+      s += c.r.slice(this.buf.length); p += c.len;
+    }
+    while (p < end) { const c = this.cands(p)[0]; s += c.r; p += c.len; }
+    return s;
+  }
+  nextKey(){ return this.guide(Math.min(this.text.length, this.pos + 3))[0] || ''; }
+}
+
+// 英字・記号（そのまま一致）
+class PlainMatcher {
+  constructor(text){ this.text = text; this.pos = 0; }
+  input(ch){ if (this.text[this.pos] === ch) { this.pos++; return {ok:true, done:1}; } return {ok:false}; }
+  nextKey(){ return this.text[this.pos] || ''; }
+}
+
+/* =========================================================
+   キーボード表示
+   ========================================================= */
+const KB_ROWS = [
+  ['1','2','3','4','5','6','7','8','9','0','-','^','¥'],
+  ['q','w','e','r','t','y','u','i','o','p','@','['],
+  ['a','s','d','f','g','h','j','k','l',';',':',']'],
+  ['z','x','c','v','b','n','m',',','.','/','\\'],
+];
+const KB_SHIFT = [0, 0.5, 0.8, 1.3];
+const FINGER = {};
+[['1qaz','lp'],['2wsx','lr'],['3edc','lm'],['45rtfgvb','li'],['67yuhjnm','ri'],['8ik,','rm'],['9ol.','rr'],['0p;/-^¥@[:]\\','rp']]
+  .forEach(([ks,f]) => { for (const k of ks) FINGER[k] = f; });
+const FINGER_NAME = {lp:'左手 小指', lr:'左手 薬指', lm:'左手 中指', li:'左手 人差し指',
+                     ri:'右手 人差し指', rm:'右手 中指', rr:'右手 薬指', rp:'右手 小指'};
+
+function keyboardHTML(){
+  return KB_ROWS.map((row, ri) =>
+    `<div class="row" style="margin-left:calc(${KB_SHIFT[ri]} * (var(--kw) + var(--kg)))">` +
+    row.map(k => `<div class="k${k==='f'||k==='j'?' home':''}" data-key="${esc(k)}" style="--fc:var(--f-${FINGER[k]})">${esc(k.toUpperCase())}</div>`).join('') +
+    `</div>`).join('');
+}
+
+/* =========================================================
+   共通
+   ========================================================= */
+const $ = (s, el = document) => el.querySelector(s);
+const app = $('#app');
+let screen = null;
+const lastSel = {};
+const session = {seconds:0, count:{}};
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
+function pad(n){ return String(n).padStart(2, '0'); }
+function today(){ const d = new Date(); return `${String(d.getFullYear()).slice(2)}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`; }
+function fmtTime(sec){ sec = Math.floor(sec || 0); return `${Math.floor(sec/3600)}時間 ${Math.floor(sec%3600/60)}分 ${sec%60}秒`; }
+function titleBar(t){ const d = '<span class="dots"><i></i><i></i><i></i></span>'; return `<h1 class="title">${d}${esc(t)}${d}</h1>`; }
+
+function loadRec(){
+  try { const r = JSON.parse(localStorage.getItem(STORE)); if (r && r.items) return r; } catch (e) {}
+  return {items:{}, total:0};
+}
+function saveRec(r){ try { localStorage.setItem(STORE, JSON.stringify(r)); } catch (e) {} }
+
+/* =========================================================
+   メニュー
+   ========================================================= */
+const itemsOf = g => Object.keys(ITEMS).filter(id => ITEMS[id].group === g);
+const MENUS = {
+  main: {title:'タイプトレーナー Web', items:[
+    {label:'ポジション練習', act:() => showMenu('position')},
+    {label:'ランダム練習',   act:() => startPractice('random')},
+    {label:'英単語練習',     act:() => showMenu('english')},
+    {label:'ローマ字練習',   act:() => showMenu('romaji')},
+    {label:'成績表示',       act:() => showResults()},
+    {label:'成績消去',       act:() => confirmClear(), gap:true},
+  ]},
+  position: {title:'ポジション練習', parent:'main', items:[
+    ...itemsOf('pos').map(id => ({label:ITEMS[id].name, act:() => startPractice(id)})),
+    {label:'メニューに戻る', act:() => showMenu('main')},
+  ]},
+  english: {title:'英単語練習', parent:'main', items:[
+    ...itemsOf('en').map(id => ({label:ITEMS[id].name, act:() => startPractice(id)})),
+    {label:'メニューに戻る', act:() => showMenu('main')},
+  ]},
+  romaji: {title:'ローマ字練習', parent:'main', items:[
+    ...itemsOf('ja').map(id => ({label:ITEMS[id].name, act:() => startPractice(id)})),
+    {label:'メニューに戻る', act:() => showMenu('main')},
+  ]},
+};
+
+function showMenu(id){
+  const m = MENUS[id];
+  let sel = lastSel[id] || 0;
+  app.innerHTML = titleBar(m.title) +
+    `<ul class="menu">${m.items.map((it, i) =>
+      `<li class="${it.gap ? 'gap' : ''}"><span class="no">${i+1}</span><span>${esc(it.label)}</span></li>`).join('')}</ul>` +
+    `<p class="hint">番号キー、または <kbd>↑</kbd><kbd>↓</kbd> と <kbd>Enter</kbd> で選んでください${m.parent ? '　／　<kbd>Esc</kbd> で戻る' : ''}</p>`;
+  const lis = [...app.querySelectorAll('.menu li')];
+  const paint = () => lis.forEach((li, i) => li.classList.toggle('sel', i === sel));
+  const choose = i => { lastSel[id] = i; m.items[i].act(); };
+  lis.forEach((li, i) => { li.onmouseenter = () => { sel = i; paint(); }; li.onclick = () => choose(i); });
+  paint();
+  screen = {onKey(e){
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= m.items.length) { choose(n - 1); return true; }
+    if (e.key === 'ArrowDown') { sel = (sel + 1) % lis.length; paint(); return true; }
+    if (e.key === 'ArrowUp')   { sel = (sel + lis.length - 1) % lis.length; paint(); return true; }
+    if (e.key === 'Enter')     { choose(sel); return true; }
+    if (e.key === 'Escape' && m.parent) { showMenu(m.parent); return true; }
+    return false;
+  }};
+}
+
+/* =========================================================
+   練習
+   ========================================================= */
+function makeTokens(item, n){
+  if (item.words) {
+    let out = [];
+    while (out.length < n) {
+      const s = shuffle(item.words.slice());
+      if (out.length && s[0] === out[out.length-1]) s.push(s.shift());
+      out = out.concat(s);
+    }
+    return out.slice(0, n);
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let t = '';
+    if (item.pool) {
+      for (let j = 0; j < 3; j++) { let k; do { k = pick(item.pool); } while (j === 0 && k === 'ん'); t += k; }
+    } else {
+      for (let j = 0; j < 5; j++) t += pick([...item.chars]);
+    }
+    out.push(t);
+  }
+  return out;
+}
+
+function startPractice(id){
+  const item = ITEMS[id];
+  const group = GROUPS.find(g => g.id === item.group);
+  const isKana = !!item.kana;
+  const tokens = makeTokens(item, 300);
+  const text = tokens.join('');
+  const matcher = isKana ? new RomajiMatcher(text) : new PlainMatcher(text);
+  const starts = []; { let a = 0; for (const t of tokens) { starts.push(a); a += t.length; } }
+  const rec = loadRec();
+  const best = rec.items[id] ? rec.items[id].best : 0;
+  session.count[id] = (session.count[id] || 0) + 1;
+
+  app.innerHTML = titleBar(item.name) +
+    `<p class="meta">練習回数 ${session.count[id]}回</p>
+    <div class="stats">
+      <div class="stat"><div class="lb">残り時間</div><div class="v" id="st-time">${LIMIT}<small>秒</small></div></div>
+      <div class="stat"><div class="lb">入力速度</div><div class="v" id="st-speed">—<small>文字/分</small></div></div>
+      <div class="stat"><div class="lb">ミスタッチ</div><div class="v" id="st-miss">0<small>回</small></div></div>
+      <div class="stat"><div class="lb">最高入力速度</div><div class="v">${best ? best.toFixed(1) : '—'}<small>文字/分</small></div></div>
+    </div>
+    <div class="guide" id="guide" ${isKana ? '' : 'hidden'}></div>
+    <div class="result" id="result" hidden></div>
+    <div class="textbox" id="tb"><div id="words">${tokens.map(t =>
+      `<span class="w">${[...t].map(c => `<span class="c">${esc(c)}</span>`).join('')}</span>`).join('')}</div></div>
+    <p class="next" id="next"></p>
+    <div class="kb" id="kb">${keyboardHTML()}</div>
+    <p class="hint" id="hint">キーを押すとスタートします。単語の間のスペースは打たなくてOKです。（<kbd>Esc</kbd> でメニューへ）</p>`;
+
+  const tb = $('#tb'), guideEl = $('#guide'), nextEl = $('#next'), hintEl = $('#hint');
+  const timeEl = $('#st-time'), speedEl = $('#st-speed'), missEl = $('#st-miss');
+  const chars = [...app.querySelectorAll('#words .c')];
+  const wordEls = [...app.querySelectorAll('#words .w')];
+  const keyEls = {}; app.querySelectorAll('#kb .k').forEach(el => keyEls[el.dataset.key] = el);
+
+  let started = false, finished = false, t0 = 0, timer = null;
+  let keys = 0, miss = 0, done = 0;
+  let lastPos = 0, curWord = 0, typedWord = '', lastTop = -1, prevKeyEl = null, missTimer = null;
+
+  function syncWord(){
+    let changed = false;
+    while (curWord + 1 < starts.length && starts[curWord+1] <= matcher.pos) { curWord++; changed = true; }
+    return changed;
+  }
+
+  function scrollToCurrent(force){
+    const w = wordEls[curWord]; if (!w) return;
+    if (!force && w.offsetTop === lastTop) return;
+    const first = lastTop < 0;
+    lastTop = w.offsetTop;
+    const lh = parseFloat(getComputedStyle(tb).lineHeight) || 56;
+    // 今打っている行を上から2行目に保つ
+    tb.scrollTo({top: Math.max(0, w.offsetTop - lh - 4), behavior: first || force ? 'auto' : 'smooth'});
+  }
+
+  function paint(){
+    const pos = matcher.pos;
+    const lo = Math.min(lastPos, pos), hi = Math.min(Math.max(lastPos, pos), chars.length - 1);
+    for (let i = lo; i <= hi; i++) chars[i].className = 'c' + (i < pos ? ' done' : i === pos ? ' now' : '');
+    lastPos = pos;
+    wordEls.forEach((w, i) => { if (i === curWord) w.classList.add('cur'); });
+    if (curWord > 0) wordEls[curWord-1].classList.remove('cur');
+    scrollToCurrent(false);
+
+    if (isKana) {
+      const end = starts[curWord+1] !== undefined ? starts[curWord+1] : text.length;
+      const g = matcher.guide(end);
+      guideEl.innerHTML = `<span class="lb">ローマ字</span><span><span class="typed">${esc(typedWord)}</span>` +
+        `<span class="rest"><b>${esc(g[0] || '')}</b>${esc(g.slice(1))}</span></span>`;
+    }
+    const nk = finished ? '' : matcher.nextKey();
+    if (prevKeyEl) prevKeyEl.classList.remove('next');
+    prevKeyEl = keyEls[nk] || null;
+    if (prevKeyEl) prevKeyEl.classList.add('next');
+    nextEl.innerHTML = nk && FINGER[nk] ? `次のキー　<kbd>${esc(nk.toUpperCase())}</kbd>　${FINGER_NAME[FINGER[nk]]}` : '';
+  }
+
+  function elapsed(){ return Math.min(LIMIT, (performance.now() - t0) / 1000); }
+
+  function tick(){
+    const el = elapsed();
+    timeEl.innerHTML = `${Math.ceil(LIMIT - el)}<small>秒</small>`;
+    if (el >= 1) speedEl.innerHTML = `${(done / el * 60).toFixed(1)}<small>文字/分</small>`;
+    if (el >= LIMIT) finish();
+  }
+
+  function addTime(el){
+    const r = loadRec();
+    const it = r.items[id] || (r.items[id] = {best:0, date:'', time:0});
+    it.time += el; r.total = (r.total || 0) + el; session.seconds += el;
+    return [r, it];
+  }
+
+  function finish(){
+    if (finished) return;
+    finished = true; clearInterval(timer);
+    const el = Math.max(elapsed(), 0.001);
+    const speed = done / el * 60, kpm = keys / el * 60, acc = keys ? (keys - miss) / keys * 100 : 0;
+    const [r, it] = addTime(el);
+    let isNew = false;
+    if (speed > it.best) { it.best = speed; it.date = today(); isNew = true; }
+    saveRec(r);
+    timeEl.innerHTML = `0<small>秒</small>`;
+    speedEl.innerHTML = `${speed.toFixed(1)}<small>文字/分</small>`;
+    const res = $('#result');
+    res.hidden = false;
+    res.innerHTML = `<div class="nums">
+        <span>打鍵数<b>${kpm.toFixed(1)}</b>打/分</span>
+        <span>入力速度<b>${speed.toFixed(1)}</b>文字/分</span>
+        <span class="bad">ミスタッチ<b>${miss}</b>回</span>
+        <span>正確さ<b>${acc.toFixed(1)}</b>%</span></div>
+      ${isNew ? `<div class="newrec">最高入力速度を更新しました！（${it.date}）</div>` : ''}
+      <div>もう一度練習するときは <kbd>Enter</kbd>、メニューに戻るときは <kbd>Esc</kbd></div>`;
+    hintEl.textContent = '';
+    paint();
+  }
+
+  function abort(){
+    if (started && !finished) { clearInterval(timer); finished = true; const [r] = addTime(elapsed()); saveRec(r); }
+  }
+
+  paint();
+  scrollToCurrent(true);
+
+  screen = {
+    onResize(){ scrollToCurrent(true); },
+    onKey(e){
+      if (e.key === 'Escape') { abort(); showMenu(group.menu); return true; }
+      if (finished) { if (e.key === 'Enter') startPractice(id); return true; }
+      if (e.key === 'Process' || e.isComposing) {
+        hintEl.className = 'hint warn';
+        hintEl.textContent = '日本語入力（IME）がオンになっています。半角英数入力に切り替えてください。';
+        return true;
+      }
+      if (e.key.length !== 1) return false;
+      let k = e.key;
+      if (/[A-Z]/.test(k)) k = k.toLowerCase();
+      if (k === ' ') return true;                  // ① スペースは打たなくてよい（押しても無視）
+      if (!started) {
+        started = true; t0 = performance.now(); timer = setInterval(tick, 100);
+        hintEl.className = 'hint';
+        hintEl.innerHTML = '<kbd>Esc</kbd> でメニューへ';
+      }
+      keys++;
+      const before = curWord;
+      const r = matcher.input(k);
+      if (r.ok) {
+        done += r.done;
+        const changed = syncWord();
+        if (changed || curWord !== before) typedWord = r.carried ? k : '';
+        else typedWord += k;
+      } else {
+        miss++;
+        missEl.innerHTML = `${miss}<small>回</small>`;
+        const c = chars[matcher.pos];
+        if (c) { c.classList.add('miss'); clearTimeout(missTimer); missTimer = setTimeout(() => c.classList.remove('miss'), 300); }
+        if (isKana) { guideEl.classList.remove('shake'); void guideEl.offsetWidth; guideEl.classList.add('shake'); }
+      }
+      paint();
+      if (matcher.pos >= text.length) finish();
+      return true;
+    },
+  };
+}
+
+/* =========================================================
+   成績表示・消去
+   ========================================================= */
+function showResults(){
+  const rec = loadRec();
+  let rows = '';
+  for (const g of GROUPS) {
+    const ids = itemsOf(g.id);
+    const sum = ids.reduce((s, id) => s + ((rec.items[id] || {}).time || 0), 0);
+    rows += `<tr class="grp"><td colspan="3">${esc(g.name)}</td><td class="n">${fmtTime(sum)}</td></tr>`;
+    if (ids.length === 1 && ITEMS[ids[0]].name === g.name) {
+      const r = rec.items[ids[0]] || {};
+      rows = rows.replace(/<tr class="grp"><td colspan="3">([^<]*)<\/td>(<td class="n">[^<]*<\/td>)<\/tr>$/,
+        `<tr class="grp"><td>$1</td><td class="n">${r.best ? r.best.toFixed(1) : '—'}</td><td class="n">${r.date || ''}</td>$2</tr>`);
+      continue;
+    }
+    for (const id of ids) {
+      const r = rec.items[id] || {};
+      rows += `<tr><td>${esc(ITEMS[id].name)}</td><td class="n">${r.best ? r.best.toFixed(1) : '—'}</td>` +
+              `<td class="n">${r.date || ''}</td><td class="n">${fmtTime(r.time)}</td></tr>`;
+    }
+  }
+  app.innerHTML = titleBar('成績表示') +
+    `<div class="summary"><span>前回までの練習時間<b>${fmtTime((rec.total || 0) - session.seconds)}</b></span>
+      <span>今回の練習時間<b>${fmtTime(session.seconds)}</b></span></div>
+    <table class="rec"><thead><tr><th>練習項目</th><th style="text-align:right">最高入力速度（文字/分）</th>
+      <th style="text-align:right">達成日</th><th style="text-align:right">累積練習時間</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="hint"><kbd>Esc</kbd> または <kbd>Enter</kbd> でメニューに戻ります</p>`;
+  screen = {onKey(e){ if (e.key === 'Escape' || e.key === 'Enter') { showMenu('main'); return true; } return false; }};
+}
+
+function confirmClear(){
+  app.innerHTML = titleBar('成績消去') +
+    `<div class="confirm"><div>成績をすべて消去します。よろしいですか？</div>
+      <div><button class="btn" id="yes"><kbd>Y</kbd> はい</button><button class="btn" id="no"><kbd>N</kbd> いいえ</button></div></div>`;
+  const yes = () => {
+    try { localStorage.removeItem(STORE); } catch (e) {}
+    session.seconds = 0;
+    app.innerHTML = titleBar('成績消去') + '<div class="confirm">成績を消去しました。</div><p class="hint"><kbd>Enter</kbd> でメニューに戻ります</p>';
+    screen = {onKey(e){ if (e.key === 'Enter' || e.key === 'Escape') { showMenu('main'); return true; } return false; }};
+  };
+  const no = () => showMenu('main');
+  $('#yes').onclick = yes; $('#no').onclick = no;
+  screen = {onKey(e){
+    const k = e.key.toLowerCase();
+    if (k === 'y') { yes(); return true; }
+    if (k === 'n' || k === 'escape') { no(); return true; }
+    return false;
+  }};
+}
+
+/* =========================================================
+   起動
+   ========================================================= */
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (screen && screen.onKey(e)) e.preventDefault();
+});
+window.addEventListener('resize', () => { if (screen && screen.onResize) screen.onResize(); });
+showMenu('main');
+</script>
+</body>
+</html>
